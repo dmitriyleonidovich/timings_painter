@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Визуализация Таймингов</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            .timing-container {
+                border: 1px solid #ccc;
+                padding: 10px;
+                overflow: hidden;
+                font-family: Arial, sans-serif;
+                background-color: #f9f9f9;
+            }
+
+            .group-container {
+                display: flex;
+                width: 100%;
+                height: 20px;
+                margin-bottom: 5px;
+            }
+
+            .group-label {
+                width: 300px;
+                line-height: 15px;
+                text-align: left;
+                color: #000;
+                font-weight: bold;
+                padding-right: 10px;
+            }
+
+            .bars-container {
+                position: relative;
+                width: calc(100% - 260px);
+                height: 100%;
+            }
+
+            .timing-bar {
+                position: absolute;
+                height: 100%;
+                border-radius: 4px;
+                border: 1px solid #181c19;
+                cursor: pointer;
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-weight: bold;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                transition: opacity 0.2s, border 0.2s;
+            }
+
+            .timing-bar:hover {
+                opacity: 0.9;
+                border: 1px solid #000;
+            }
+
+            .timing-label {
+                pointer-events: none;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+
+            #timings {
+                width: 100%;
+            }
+
+            body {
+                background-color: #eaeaea;
+                margin: 0;
+                padding: 20px;
+            }
+
+            #controls {
+                margin-bottom: 20px;
+            }
+
+            #controls label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: bold;
+            }
+
+            #controls input[type='file'],
+            #controls textarea {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            #showButton {
+                display: block;
+                margin-top: 10px;
+                padding: 10px 20px;
+                font-size: 16px;
+            }
+
+            @media (max-width: 600px) {
+                .group-label {
+                    width: 100px;
+                }
+
+                .bars-container {
+                    width: calc(100% - 100px);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- UI Elements -->
+        <div id="controls">
+            <label for="fileInput">Выберите JSON-файл с таймингами:</label>
+            <input type="file" id="fileInput" accept=".json" />
+            <label for="jsonInput">Или вставьте тайминги в формате JSON здесь:</label>
+            <textarea id="jsonInput" rows="10" placeholder="Вставьте здесь ваш JSON..."></textarea>
+            <button id="showButton">Показать</button>
+        </div>
+
+        <!-- Visualization Container -->
+        <div id="timings"></div>
+
+        <script>
+            // JavaScript код
+
+            function getProcessKey(timing) {
+                const processName = timing.processName;
+                const component = timing.component;
+                const details = timing.details || {};
+                const id = details.id ?? '';
+                const type = details.type ?? '';
+                const isInit = details.isInit ?? '';
+                const number = details.number ?? '';
+                const readyState = details.readyState ?? '';
+                return `${processName}|${component}|${id}|${type}|${isInit}|${number}|${readyState}`;
+            }
+
+            function getGroupKey(timing) {
+                const processName = timing.processName;
+                const component = timing.component;
+                const details = timing.details || {};
+                const type = details.type ?? '';
+                const isInit = details.isInit ?? '';
+                return `${processName}|${component}|${type}|${isInit}`;
+            }
+
+            function buildVisualization(timings) {
+                const container = document.getElementById('timings');
+
+                if (!container) {
+                    return;
+                }
+
+                const processes = new Map();
+
+                for (const timing of timings) {
+                    const key = getProcessKey(timing);
+                    if (!processes.has(key)) {
+                        processes.set(key, {});
+                    }
+                    const process = processes.get(key);
+                    if (timing.point === 'start') {
+                        process.start = timing;
+                    } else if (timing.point === 'end') {
+                        process.end = timing;
+                    }
+                }
+
+                const groups = new Map();
+
+                for (const process of processes.values()) {
+                    const timing = process.start || process.end;
+                    if (!timing) {
+                        continue;
+                    }
+                    const groupKey = getGroupKey(timing);
+                    if (!groups.has(groupKey)) {
+                        groups.set(groupKey, []);
+                    }
+                    groups.get(groupKey).push(process);
+                }
+
+                const timestamps = timings.map((t) => t.timestamp);
+                const minTime = Math.min(...timestamps);
+                const maxTime = Math.max(...timestamps);
+
+                const totalDuration = maxTime - minTime || 1;
+
+                const colorMap = new Map();
+                const groupKeys = Array.from(groups.keys());
+                const colors = [
+                    '#FF5733',
+                    '#33FF57',
+                    '#3357FF',
+                    '#FF33A1',
+                    '#FFC733',
+                    '#33FFF9',
+                    '#8D33FF',
+                    '#FF8333',
+                    '#33FF83',
+                    '#FF3380',
+                    '#00FF00',
+                    '#FF0000',
+                    '#0000FF',
+                    '#FFFF00',
+                    '#8B008B',
+                    '#99CCFF',
+                    '#00FFFF',
+                    '#FFA500',
+                ];
+                groupKeys.forEach((key, index) => {
+                    colorMap.set(key, colors[index % colors.length]);
+                });
+
+                container.innerHTML = '';
+                container.classList.add('timing-container');
+
+                const groupsEntries = Array.from(groups.entries());
+                groupsEntries.sort((a, b) => a[0].localeCompare(b[0]));
+
+                for (const [groupKey, processesInGroup] of groupsEntries) {
+                    const color = colorMap.get(groupKey) || 'black';
+                    const tokens = groupKey.split('|');
+                    const processName = tokens[0];
+                    const component = tokens[1];
+                    const type = tokens[2];
+                    const isInit = tokens[3];
+
+                    // Создаем контейнер для группы
+                    const groupContainer = document.createElement('div');
+                    groupContainer.classList.add('group-container');
+
+                    // Создаем метку с названием процесса
+                    const groupLabel = document.createElement('div');
+                    groupLabel.classList.add('group-label');
+
+                    const additionalTypeLabel = type ? ` [${type}]` : '';
+                    const additionalIsInitLabel = `${isInit && isInit === 'true' ? ' (Init)' : ''}`;
+                    groupLabel.innerText = `${processName}${additionalTypeLabel}${additionalIsInitLabel}`;
+
+                    // Создаем контейнер для баров
+                    const barsContainer = document.createElement('div');
+                    barsContainer.classList.add('bars-container');
+
+                    processesInGroup.sort((a, b) => {
+                        const aTime =
+                            (a.start && a.start.timestamp) ?? (a.end && a.end.timestamp) ?? 0;
+                        const bTime =
+                            (b.start && b.start.timestamp) ?? (b.end && b.end.timestamp) ?? 0;
+                        return aTime - bTime;
+                    });
+
+                    for (const process of processesInGroup) {
+                        const start = process.start;
+                        const end = process.end;
+
+                        let startTime = start ? start.timestamp : minTime;
+                        let endTime = end ? end.timestamp : maxTime;
+
+                        const hasStart = !!start;
+                        const hasEnd = !!end;
+
+                        const duration = hasStart && hasEnd ? endTime - startTime || 1 : null;
+
+                        const details = (start && start.details) || (end && end.details) || {};
+                        const loadingInfo = details.type
+                            ? `${details.type}-${
+                                  details.isInit ? 'Init Segment' : 'Media Segment'
+                              }${details.number !== undefined ? `-${details.number}` : ''}`
+                            : '';
+
+                        const leftPercent = ((startTime - minTime) / totalDuration) * 100;
+                        const widthPercent = ((endTime - startTime) / totalDuration) * 100;
+                        const readyStateLabel = details.readyState ?? '';
+                        const minBarWidthPercent = 0.5;
+
+                        const bar = document.createElement('div');
+                        bar.classList.add('timing-bar');
+                        bar.style.left = hasStart
+                            ? `${leftPercent}%`
+                            : `${((endTime - minTime) / totalDuration) * 100}%`;
+                        bar.style.backgroundColor = color;
+
+                        const description =
+                            `${processName} [${component}] ${loadingInfo}\n` +
+                            `readyState: ${readyStateLabel}\n` +
+                            `${JSON.stringify(details, null, 2)}\n` +
+                            (hasStart && hasEnd
+                                ? `Длительность: ${duration} мс`
+                                : hasStart
+                                ? 'Нет конца'
+                                : 'Нет начала');
+                        bar.title = description;
+
+                        let durationText = '';
+                        if (hasStart && hasEnd) {
+                            bar.style.width = `${Math.max(widthPercent, minBarWidthPercent)}%`;
+                            durationText = `${duration}`;
+                        } else if (hasStart && !hasEnd) {
+                            bar.style.width = `${100 - leftPercent}%`;
+                        } else if (!hasStart && hasEnd) {
+                            bar.style.width = `${minBarWidthPercent}%`;
+                        }
+
+                        if (durationText) {
+                            const label = document.createElement('span');
+                            label.classList.add('timing-label');
+                            label.innerText = durationText;
+                            bar.appendChild(label);
+                        }
+
+                        barsContainer.appendChild(bar);
+                    }
+
+                    // Добавляем метку и контейнер баров в контейнер группы
+                    groupContainer.appendChild(groupLabel);
+                    groupContainer.appendChild(barsContainer);
+
+                    // Добавляем контейнер группы в основной контейнер
+                    container.appendChild(groupContainer);
+                }
+            }
+
+            window.onload = function () {
+                const fileInput = document.getElementById('fileInput');
+                const jsonInput = document.getElementById('jsonInput');
+                const showButton = document.getElementById('showButton');
+
+                showButton.addEventListener('click', function () {
+                    if (fileInput.files.length > 0) {
+                        const file = fileInput.files[0];
+                        const reader = new FileReader();
+                        reader.onload = function (event) {
+                            try {
+                                const jsonText = event.target.result;
+                                const timingsArray = JSON.parse(jsonText);
+                                if (!Array.isArray(timingsArray)) {
+                                    alert('JSON-файл должен содержать массив таймингов.');
+                                    return;
+                                }
+                                buildVisualization(timingsArray);
+                            } catch (error) {
+                                alert('Некорректный JSON в файле.');
+                                console.error(error);
+                                return;
+                            }
+                        };
+                        reader.readAsText(file);
+                    } else if (jsonInput.value.trim() !== '') {
+                        try {
+                            const jsonText = jsonInput.value;
+                            const timingsArray = JSON.parse(jsonText);
+                            if (!Array.isArray(timingsArray)) {
+                                alert('Вставленный JSON должен содержать массив таймингов.');
+                                return;
+                            }
+                            buildVisualization(timingsArray);
+                        } catch (error) {
+                            alert('Некорректный JSON в текстовом поле.');
+                            console.error(error);
+                            return;
+                        }
+                    } else {
+                        alert('Пожалуйста, выберите JSON-файл или вставьте JSON в текстовое поле.');
+                    }
+                });
+            };
+        </script>
+    </body>
+</html>
