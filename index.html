@@ -59,6 +59,7 @@
             .timing-bar:hover {
                 opacity: 0.9;
                 border: 1px solid #000;
+                z-index: 2;
             }
 
             .timing-label {
@@ -181,7 +182,8 @@
                 const isInit = details.isInit ?? '';
                 const number = details.number ?? '';
                 const readyState = details.readyState ?? '';
-                return `${processName}|${component}|${id}|${type}|${isInit}|${number}|${readyState}`;
+                const sourceKey = details.sourceKey ?? '';
+                return `${processName}|${component}|${id}|${type}|${isInit}|${number}|${readyState}|${sourceKey}`;
             }
 
             function getGroupKey(timing) {
@@ -272,7 +274,7 @@
                     const component = tokens[1];
                     const type = tokens[2];
                     const isInit = tokens[3];
-
+                    processName === 'attach' ? console.log('==== PROCESS ATTACH') : null;
                     const groupContainer = document.createElement('div');
                     groupContainer.classList.add('group-container');
 
@@ -293,8 +295,9 @@
                             (b.start && b.start.timestamp) ?? (b.end && b.end.timestamp) ?? 0;
                         return aTime - bTime;
                     });
-
+                    processName === 'attach' ? console.log('===== PROCESSES IN GROUP', processesInGroup) :null;
                     for (const process of processesInGroup) {
+                      processName === 'attach' ?  console.log('===== PROC!') : null;
                         const start = process.start;
                         const end = process.end;
 
@@ -302,6 +305,7 @@
                         let endTimeProc = end ? end.timestamp : maxTime;
 
                         if (endTimeProc < displayMinTime || startTimeProc > displayMaxTime) {
+                            console.log('===== !!!!!!')
                             continue;
                         }
 
