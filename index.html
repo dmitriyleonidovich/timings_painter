@@ -281,7 +281,7 @@
                     const groupLabel = document.createElement('div');
                     groupLabel.classList.add('group-label');
 
-                    const additionalTypeLabel = type ? `${type}` : '';
+                    const additionalTypeLabel = type ? ` ${type}` : '';
                     const additionalIsInitLabel = `${isInit && isInit === 'true' ? ' (Init)' : ''}`;
                     groupLabel.innerText = `${processName}${additionalTypeLabel}${additionalIsInitLabel}`;
 
