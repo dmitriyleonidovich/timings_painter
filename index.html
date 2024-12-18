@@ -274,7 +274,7 @@
                     const component = tokens[1];
                     const type = tokens[2];
                     const isInit = tokens[3];
-                    processName === 'attach' ? console.log('==== PROCESS ATTACH') : null;
+
                     const groupContainer = document.createElement('div');
                     groupContainer.classList.add('group-container');
 
@@ -295,9 +295,8 @@
                             (b.start && b.start.timestamp) ?? (b.end && b.end.timestamp) ?? 0;
                         return aTime - bTime;
                     });
-                    processName === 'attach' ? console.log('===== PROCESSES IN GROUP', processesInGroup) :null;
+
                     for (const process of processesInGroup) {
-                      processName === 'attach' ?  console.log('===== PROC!') : null;
                         const start = process.start;
                         const end = process.end;
 
@@ -305,7 +304,6 @@
                         let endTimeProc = end ? end.timestamp : maxTime;
 
                         if (endTimeProc < displayMinTime || startTimeProc > displayMaxTime) {
-                            console.log('===== !!!!!!')
                             continue;
                         }
 
