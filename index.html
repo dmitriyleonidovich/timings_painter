@@ -7,7 +7,7 @@
             * {
                 box-sizing: border-box;
             }
-            /* Стили */
+
             .timing-container {
                 border: 1px solid #ccc;
                 padding: 10px;
@@ -148,14 +148,12 @@
         </style>
     </head>
     <body>
-        <!-- UI Elements -->
         <div id="controls">
             <label for="fileInput">Выберите JSON-файл с таймингами:</label>
             <input type="file" id="fileInput" accept=".json" />
             <label for="jsonInput">Или вставьте тайминги в формате JSON здесь:</label>
             <textarea id="jsonInput" rows="10" placeholder="Вставьте здесь ваш JSON..."></textarea>
             <button id="showButton">Показать</button>
-            <!-- Zoom Controls -->
             <div id="zoomControls" style="display: none">
                 <label for="startTime">Начальное время:</label>
                 <input type="range" id="startTime" min="0" max="100" value="0" />
@@ -167,11 +165,9 @@
             </div>
         </div>
 
-        <!-- Visualization Container -->
         <div id="timings"></div>
 
         <script>
-            // JavaScript код
             let globalTimings = [];
             let minTime = 0;
             let maxTime = 0;
@@ -233,7 +229,6 @@
                     groups.get(groupKey).push(process);
                 }
 
-                // Use the provided startTime and endTime
                 const displayMinTime = startTime !== undefined ? startTime : minTime;
                 const displayMaxTime = endTime !== undefined ? endTime : maxTime;
                 const displayTotalDuration = displayMaxTime - displayMinTime || 1;
@@ -278,11 +273,9 @@
                     const type = tokens[2];
                     const isInit = tokens[3];
 
-                    // Создаем контейнер для группы
                     const groupContainer = document.createElement('div');
                     groupContainer.classList.add('group-container');
 
-                    // Создаем метку с названием процесса
                     const groupLabel = document.createElement('div');
                     groupLabel.classList.add('group-label');
 
@@ -290,7 +283,6 @@
                     const additionalIsInitLabel = `${isInit && isInit === 'true' ? ' (Init)' : ''}`;
                     groupLabel.innerText = `${processName}${additionalTypeLabel}${additionalIsInitLabel}`;
 
-                    // Создаем контейнер для баров
                     const barsContainer = document.createElement('div');
                     barsContainer.classList.add('bars-container');
 
@@ -309,12 +301,10 @@
                         let startTimeProc = start ? start.timestamp : minTime;
                         let endTimeProc = end ? end.timestamp : maxTime;
 
-                        // Skip if the process is outside of the display range
                         if (endTimeProc < displayMinTime || startTimeProc > displayMaxTime) {
                             continue;
                         }
 
-                        // Clamp the start and end times to the display range
                         if (startTimeProc < displayMinTime) startTimeProc = displayMinTime;
                         if (endTimeProc > displayMaxTime) endTimeProc = displayMaxTime;
 
@@ -379,20 +369,16 @@
                         barsContainer.appendChild(bar);
                     }
 
-                    // Добавляем метку и контейнер баров в контейнер группы
                     groupContainer.appendChild(groupLabel);
                     groupContainer.appendChild(barsContainer);
 
-                    // Добавляем контейнер группы в основной контейнер
                     container.appendChild(groupContainer);
                 }
 
-                // Добавляем линейку времени
                 addTimeRuler(container, displayMinTime, displayMaxTime);
             }
 
             function addTimeRuler(container, displayMinTime, displayMaxTime) {
-                // Удаляем предыдущую линейку времени, если есть
                 const existingRuler = document.getElementById('timeRuler');
                 if (existingRuler) {
                     existingRuler.remove();
@@ -406,26 +392,24 @@
                 const totalMs = Math.ceil(duration);
 
                 for (let ms = 0; ms <= duration; ms += 100) {
-                    // Шаг 100 мс (0.1 секунды)
                     const leftPercent = (ms / duration) * 100;
 
                     const tick = document.createElement('div');
                     tick.classList.add('tick');
                     tick.style.left = `${leftPercent}%`;
-                    tick.style.height = ms % 1000 === 0 ? '10px' : '5px'; // Высота метки
+                    tick.style.height = ms % 1000 === 0 ? '10px' : '5px';
                     tick.style.backgroundColor = '#000';
                     tick.style.top = '0';
 
                     ruler.appendChild(tick);
 
-                    // Добавляем подпись каждую секунду
                     if (ms % 1000 === 0) {
                         const label = document.createElement('div');
                         label.classList.add('tick-label');
                         label.style.left = `${leftPercent}%`;
                         label.style.top = '10px';
                         label.style.transform = 'translateX(-50%)';
-                        const timeLabel = (ms / 1000).toFixed(0); // количество секунд от начала периода
+                        const timeLabel = (ms / 1000).toFixed(0);
                         label.innerText = `${timeLabel}s`;
                         ruler.appendChild(label);
                     }
@@ -485,18 +469,21 @@
                             const jsonText = jsonInput.value;
                             const timingsArray = JSON.parse(jsonText);
                             if (!Array.isArray(timingsArray)) {
-                                alert('Вставленный JSON должен содержать массив таймингов.');
+                                console.error(
+                                    'Вставленный JSON должен содержать массив таймингов.',
+                                );
                                 return;
                             }
                             globalTimings = timingsArray;
                             processTimings();
                         } catch (error) {
-                            alert('Некорректный JSON в текстовом поле.');
-                            console.error(error);
+                            console.error('Некорректный JSON в текстовом поле.');
                             return;
                         }
                     } else {
-                        alert('Пожалуйста, выберите JSON-файл или вставьте JSON в текстовое поле.');
+                        console.error(
+                            'Пожалуйста, выберите JSON-файл или вставьте JSON в текстовое поле.',
+                        );
                     }
                 });
 
@@ -506,7 +493,6 @@
                     maxTime = Math.max(...timestamps);
                     totalDuration = maxTime - minTime || 1;
 
-                    // Настраиваем ползунки
                     startTimeInput.min = minTime;
                     startTimeInput.max = maxTime;
                     startTimeInput.value = minTime;
