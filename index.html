@@ -175,16 +175,9 @@
             let totalDuration = 0;
             function getProcessKey(timing) {
                 const processName = timing.processName;
+                const processId = timing.processId;
                 const component = timing.component;
-                const details = timing.details || {};
-                const id = details.id ?? '';
-                const type = details.type ?? '';
-                const isInit = details.isInit ?? '';
-                const number = details.number ?? '';
-                const readyState = details.readyState ?? '';
-                const sourceKey = details.sourceKey ?? '';
-                const count = details.calls ?? details.count ?? ''
-                return `${processName}|${component}|${id}|${type}|${isInit}|${number}|${readyState}|${sourceKey}|${count}`;
+                return `${processName}|${component}|${processId}`;
             }
 
             function getGroupKey(timing) {
