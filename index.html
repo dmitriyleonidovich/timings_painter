@@ -101,6 +101,10 @@
                 padding: 20px;
             }
 
+            .range-input {
+                width: 100%;
+            }
+
             #controls {
                 margin-bottom: 20px;
             }
@@ -157,11 +161,11 @@
             <button id="showButton">Показать</button>
             <div id="zoomControls" style="display: none">
                 <label for="startTime">Начальное время:</label>
-                <input type="range" id="startTime" min="0" max="100" value="0" />
+                <input class="range-input" type="range" id="startTime" min="0" max="100" value="0" />
                 <span id="startTimeLabel">0</span> мс
 
                 <label for="endTime">Конечное время:</label>
-                <input type="range" id="endTime" min="0" max="100" value="100" />
+                <input class="range-input" type="range" id="endTime" min="0" max="100" value="100" />
                 <span id="endTimeLabel">100</span> мс
             </div>
         </div>
