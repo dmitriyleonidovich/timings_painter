@@ -161,11 +161,25 @@
             <button id="showButton">Показать</button>
             <div id="zoomControls" style="display: none">
                 <label for="startTime">Начальное время:</label>
-                <input class="range-input" type="range" id="startTime" min="0" max="100" value="0" />
+                <input
+                    class="range-input"
+                    type="range"
+                    id="startTime"
+                    min="0"
+                    max="100"
+                    value="0"
+                />
                 <span id="startTimeLabel">0</span> мс
 
                 <label for="endTime">Конечное время:</label>
-                <input class="range-input" type="range" id="endTime" min="0" max="100" value="100" />
+                <input
+                    class="range-input"
+                    type="range"
+                    id="endTime"
+                    min="0"
+                    max="100"
+                    value="100"
+                />
                 <span id="endTimeLabel">100</span> мс
             </div>
         </div>
@@ -200,33 +214,14 @@
                     return;
                 }
 
-                const processes = new Map();
-
-                for (const timing of timings) {
-                    const key = getProcessKey(timing);
-                    if (!processes.has(key)) {
-                        processes.set(key, {});
-                    }
-                    const process = processes.get(key);
-                    if (timing.point === 'start') {
-                        process.start = timing;
-                    } else if (timing.point === 'end') {
-                        process.end = timing;
-                    }
-                }
-
                 const groups = new Map();
 
-                for (const process of processes.values()) {
-                    const timing = process.start || process.end;
-                    if (!timing) {
-                        continue;
-                    }
+                for (const timing of timings) {
                     const groupKey = getGroupKey(timing);
                     if (!groups.has(groupKey)) {
                         groups.set(groupKey, []);
                     }
-                    groups.get(groupKey).push(process);
+                    groups.get(groupKey).push(timing);
                 }
 
                 const displayMinTime = startTime !== undefined ? startTime : minTime;
@@ -286,35 +281,32 @@
                     const barsContainer = document.createElement('div');
                     barsContainer.classList.add('bars-container');
 
-                    processesInGroup.sort((a, b) => {
-                        const aTime =
-                            (a.start && a.start.timestamp) ?? (a.end && a.end.timestamp) ?? 0;
-                        const bTime =
-                            (b.start && b.start.timestamp) ?? (b.end && b.end.timestamp) ?? 0;
-                        return aTime - bTime;
-                    });
+                    processesInGroup.sort((a, b) => a.startTimestamp - b.startTimestamp);
 
                     for (const process of processesInGroup) {
-                        const start = process.start;
-                        const end = process.end;
+                        const { startTimestamp, endTimestamp, details = {}, endReason } = process;
 
-                        let startTimeProc = start ? start.timestamp : minTime;
-                        let endTimeProc = end ? end.timestamp : maxTime;
+                        let startTimeProc = startTimestamp;
+                        let endTimeProc = endTimestamp ?? maxTime;
 
                         if (endTimeProc < displayMinTime || startTimeProc > displayMaxTime) {
                             continue;
                         }
 
-                        if (startTimeProc < displayMinTime) startTimeProc = displayMinTime;
-                        if (endTimeProc > displayMaxTime) endTimeProc = displayMaxTime;
+                        if (startTimeProc < displayMinTime) {
+                            startTimeProc = displayMinTime;
+                        }
 
-                        const hasStart = !!start;
-                        const hasEnd = !!end;
+                        if (endTimeProc > displayMaxTime) {
+                            endTimeProc = displayMaxTime;
+                        }
+
+                        const hasStart = !!startTimestamp;
+                        const hasEnd = !!endTimestamp;
 
                         const duration =
                             hasStart && hasEnd ? endTimeProc - startTimeProc || 1 : null;
 
-                        const details = (start && start.details) || (end && end.details) || {};
                         const loadingInfo = details.type
                             ? `${details.type}-${
                                   details.isInit ? 'Init Segment' : 'Media Segment'
@@ -335,7 +327,7 @@
 
                         const description =
                             `${processName} [${component}] ${loadingInfo}\n` +
-                            `${readyStateLabel}\n` +
+                            `${endReason ? `(${endReason})\n` : ''}` +
                             `${
                                 hasStart && hasEnd
                                     ? `Длительность: ${duration} мс`
@@ -344,12 +336,12 @@
                                     : 'Нет начала'
                             }\n` +
                             `${JSON.stringify(details, null, 2)}\n` +
-                            `${hasStart ? `start:${start.timestamp}\n` : ''}` +
-                            `${hasEnd ? `end:${end.timestamp}\n` : ''}`;
+                            `${hasStart ? `start:${startTimestamp}\n` : ''}` +
+                            `${hasEnd ? `end:${endTimestamp}\n` : ''}`;
 
                         bar.title = description;
 
-                        let durationText = '';
+                        let durationText = '∞';
                         if (hasStart && hasEnd) {
                             bar.style.width = `${Math.max(widthPercent, minBarWidthPercent)}%`;
                             durationText = `${duration}`;
@@ -357,13 +349,13 @@
                             bar.style.width = `${Math.max(widthPercent, minBarWidthPercent)}%`;
                         }
 
-                        if (durationText) {
-                            const label = document.createElement('span');
-                            label.classList.add('timing-label');
-                            label.innerText = `${durationText}${
-                                readyStateLabel ? ` (${readyStateLabel})` : ''
-                            }`;
-                            bar.appendChild(label);
+                        const label = document.createElement('span');
+                        label.classList.add('timing-label');
+                        label.innerText = `${durationText}`;
+                        bar.appendChild(label);
+
+                        if (readyStateLabel !== '') {
+                            label.innerText += ` (${readyStateLabel})`;
                         }
 
                         barsContainer.appendChild(bar);
@@ -488,9 +480,12 @@
                 });
 
                 function processTimings() {
-                    const timestamps = globalTimings.map((t) => t.timestamp);
-                    minTime = Math.min(...timestamps);
-                    maxTime = Math.max(...timestamps);
+                    const startTimestamps = globalTimings
+                        .map((t) => t.startTimestamp)
+                        .filter(Boolean);
+                    const endTimestamps = globalTimings.map((t) => t.endTimestamp).filter(Boolean);
+                    minTime = Math.min(...startTimestamps);
+                    maxTime = Math.max(...endTimestamps);
                     totalDuration = maxTime - minTime || 1;
 
                     startTimeInput.min = minTime;
