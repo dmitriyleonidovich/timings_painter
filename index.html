@@ -201,9 +201,9 @@
             function getGroupKey(timing) {
                 const processName = timing.processName;
                 const component = timing.component;
-                const details = timing.details || {};
-                const type = details.type ?? '';
-                const isInit = details.isInit ?? '';
+                const data = timing.data || {};
+                const type = data.type ?? '';
+                const isInit = data.isInit ?? '';
                 return `${processName}|${component}|${type}|${isInit}`;
             }
 
@@ -284,7 +284,13 @@
                     processesInGroup.sort((a, b) => a.startTimestamp - b.startTimestamp);
 
                     for (const process of processesInGroup) {
-                        const { startTimestamp, endTimestamp, details = {}, endReason } = process;
+                        const {
+                            startTimestamp,
+                            endTimestamp,
+                            details = {},
+                            data = {},
+                            endReason,
+                        } = process;
 
                         let startTimeProc = startTimestamp;
                         let endTimeProc = endTimestamp ?? maxTime;
@@ -307,17 +313,17 @@
                         const duration =
                             hasStart && hasEnd ? endTimeProc - startTimeProc || 1 : null;
 
-                        const loadingInfo = details.type
-                            ? `${details.type}-${
-                                  details.isInit ? 'Init Segment' : 'Media Segment'
-                              }${details.number !== undefined ? `-${details.number}` : ''}`
+                        const loadingInfo = data.type
+                            ? `${data.type}-${data.isInit ? 'Init Segment' : 'Media Segment'}${
+                                  data.number !== undefined ? `-${data.number}` : ''
+                              }`
                             : '';
 
                         const leftPercent =
                             ((startTimeProc - displayMinTime) / displayTotalDuration) * 100;
                         const widthPercent =
                             ((endTimeProc - startTimeProc) / displayTotalDuration) * 100;
-                        const readyStateLabel = details.readyState ?? '';
+                        const readyStateLabel = data.readyState ?? '';
                         const minBarWidthPercent = 0.5;
 
                         const bar = document.createElement('div');
@@ -335,7 +341,8 @@
                                     ? 'Нет конца'
                                     : 'Нет начала'
                             }\n` +
-                            `${JSON.stringify(details, null, 2)}\n` +
+                            `details: ${JSON.stringify(details, null, 2)}\n` +
+                            `data: ${JSON.stringify(data, null, 2)}\n` +
                             `${hasStart ? `start:${startTimestamp}\n` : ''}` +
                             `${hasEnd ? `end:${endTimestamp}\n` : ''}`;
 
